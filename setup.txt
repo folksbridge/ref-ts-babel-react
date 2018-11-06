@@ -1,0 +1,233 @@
+mkdir ts-babel-react
+cd ts-babel-react
+create setup.txt file: setup.txt
+
+Origin: https://github.com/jackfranklin/javascriptplayground.com/blob/master/_posts/2017-04-24-react-typescript.md
+
+TypeScript resources:
+https://medium.com/@tomdale/glimmer-js-whats-the-deal-with-typescript-f666d1a3aad0
+https://www.typescriptlang.org/docs/tutorial.html
+https://basarat.gitbooks.io/typescript/content/docs/getting-started.html
+http://blog.tomduncalf.com/posts/setting-up-typescript-and-react/
+https://github.com/DefinitelyTyped/DefinitelyTyped
+https://microsoft.github.io/TypeSearch/
+
+Installing TypeScript and configuring it
+===========================================
+yarn init
+yarn add typescript -D
+
+/*
+Install TypeScript you get the tsc command line tool which can compile TypeScript using setttings in tsconfig.json file
+*/
+ run "./node_modules/.bin/tsc --init" or just "tsc --init" if you hve the ./node_modules/.bin directory on my $PATH.
+
+ tsc --init generates a tsconfig.json which is where all the config for TypeScript’s compiler lives.
+    {
+        "compilerOptions": {
+        "module": "esnext", //"es6" = use ES2015 modules
+        "target": "esnext", //"es6" = compile to ES2015 (Babel will do the rest)
+        "allowSyntheticDefaultImports": true, // see below
+        "esModuleInterop": true,  /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
+        "baseUrl": "src", /* Base directory to resolve non-absolute module names. */
+        "sourceMap": true, // make TypeScript generate sourcemaps
+        "outDir": "ts-build", // output directory to build to (irrelevant because we use Webpack most of the time)
+        "jsx": "preserve", // enable JSX mode, but "preserve" tells TypeScript to not transform it (we'll use Babel)
+        "strict": true,
+        "declaration": true,    /* Generates corresponding '.d.ts' file. */
+        },
+        "exclude": [
+        "node_modules" // don't run on any code in the node_modules directory
+        ]
+    }
+/* read the origin for more informaton regarding the above settings. */
+
+Setting up Webpack, Babel and TypeScript
+=========================================
+I like the developer workflow and it’s good at managing complex applications and their build pipeline. 
+TypeScript compiler is going to output ES2015 + React for us, so we’ll get Babel to do the work. 
+for webpack: awesome-typescript-loader or ts-loader 
+
+yarn add @babel/core @babel/cli @babel/preset-env @babel/preset-react @babel/plugin-proposal-class-properties webpack-cli webpack babel-loader ts-loader webpack-dev-server -D
+
+this setup does not need @babel/preset-typescript. Bable runs after ts-loader compiles TS to ESNext.
+Create file: .babelrc
+    {
+        "presets": [
+            "@babel/env",
+            //remove this line: "@babel/typescript",
+            "@babel/react"
+        ],
+        "plugins": [
+            "@babel/proposal-class-properties"
+        ]
+    }
+
+create file: webpack.config.js:
+    const webpack = require("webpack");
+    const path = require("path");
+
+    module.exports = {
+    // put sourcemaps inline
+    devtool: "eval",
+
+    // entry point of our application, within the `src` directory (which we add to resolve.modules below):
+    entry: ["./src/index.tsx"], //=  entry: { main: './path/to/my/entry/file.js' }
+
+    // configure the output directory and publicPath for the devServer
+    output: {
+        path: path.resolve(__dirname, "dist"),
+        filename: "[name].bundle.js",
+        publicPath: "dist"
+    },
+
+    // configure the dev server to run
+    devServer: {
+        contentBase: path.join(__dirname, "public/"),
+        port: 3000,
+        open: true
+    },
+
+    // tell Webpack to load TypeScript files
+    resolve: {
+        // Look for modules in .ts(x) files first, then .js
+        extensions: [".ts", ".tsx", ".js"],
+
+        // add 'src' to the modules, so that when you import files you can do so with 'src' as the relative route
+        modules: ["src", "node_modules"]
+    },
+
+    module: {
+        rules: [
+        // .ts(x) files should first pass through the Typescript loader, and then through babel
+        {
+            test: /\.tsx?$/,
+            loaders: ["babel-loader", "ts-loader"],
+            include: path.resolve("src")
+        }
+        ]
+    }
+    };
+
+
+yarn add react react-dom @types/react @types/react-dom -S
+
+create src/index.tsx, which will be our application’s entry point.
+    import React from 'react';
+    import ReactDOM from 'react-dom';
+
+    const App = () => {
+    return (
+        <div>
+        <p>Hello world!</p>
+        </div>
+    );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('app'));
+
+add to package.json scripts:
+  "scripts": {
+    "build": "webpack"
+  },
+run "yarn build" command
+
+
+Running the app locally
+==============================
+add to package.json scripts:
+    "scripts": {
+        "build": "webpack",
+        "start": "webpack-dev-server"
+    }
+run "yarn start" command
+
+Typing a module
+==================
+To define a file that has just types in, you suffix it .d.ts (the ‘d’ is for ‘declaration’).
+TypeScript will automatically find these files in your project, you don’t need to explicitly import them.
+
+example:
+First create a TypeScript interface for the properties that the component takes, and then the line export = ReactAce declares that the component is the object exported by the module.
+react-ace.d.ts:
+    declare module 'react-ace' {
+        interface ReactAceProps {
+        mode: string
+        theme: string
+        name: string
+        editorProps?: {}
+        showPrintMargin?: boolean
+        minLines?: number
+        maxLines?: number
+        wrapEnabled?: boolean
+        value: string
+        highlightActiveLine?: boolean
+        width?: string
+        fontSize?: number
+        }
+
+        const ReactAce: React.ComponentClass<ReactAceProps>
+        export = ReactAce
+    }
+By typing the properties, TypeScript will tell me if I typo a property or forget to pass one, which is really valuable.
+
+Linting
+==================
+yarn add tslint tslint-react -D
+
+After installing tslint, and initializing a default configuration, tsling.json
+run "./node_modules/.bin/tslint --init"
+
+add to package.json scripts:
+"ling": "tslint -c tslint.json 'src/**/*.{ts,tsx}'",
+
+run "yarn lint"
+
+(to use specific lint setting: tslint --project tsconfig.json)
+
+Testing
+================
+https://rjzaworski.com/2016/12/testing-typescript-with-jest
+
+yarn add jest @types/jest ts-jest --save-dev
+
+create file: jest.config.js:
+    module.exports = {
+        'roots': [
+        '<rootDir>/src'
+        ],
+        'transform': {
+        '.*\.tsx?$': 'ts-jest'
+        },
+        'testRegex': '(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$',
+        'moduleFileExtensions': [
+        'ts',
+        'tsx',
+        'js',
+        'jsx',
+        'json',
+        'node'
+        ]
+    }
+/*
+Jest is directly compiling code (not using webpack), you need to handle non-JavaScript imports (like css and image files) appropriately. 
+*/
+update jest.config.js:
+    moduleNameMapper: {
+        ".(css|jpg|png)$": "<rootDir>/empty-module.js"
+    },
+create file: empty-module.js
+    module.exports = '';
+/* For generating a meaningful coverage report: */
+update jest.config.js:
+    collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/index.tsx',
+    ],
+
+add to package.json scripts:
+    "test": "jest",
+    "report": "jest --coverage"
+
+shallow rendering with enzyme:
+yarn add enzyme enzyme-adapter-react-16 @types/enzyme @types/enzyme-adapter-react-16 -D

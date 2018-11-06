@@ -1,0 +1,16 @@
+module.exports = {
+  roots: ["<rootDir>/src"],
+  transform: {
+    ".*.tsx?$": "ts-jest"
+  },
+  testRegex: "(/__tests__/.*|(\\.|/)(test|spec))\\.(js|ts|jsx?|tsx?)$",
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+  /*
+    Jest is directly compiling code (not using webpack), you need to handle non-JavaScript imports (like css and image files) appropriately. 
+    */
+  moduleNameMapper: {
+    ".(css|jpg|png)$": "<rootDir>/empty-module.js"
+  },
+  //
+  collectCoverageFrom: ["src/**/*.{ts,tsx}", "!src/index.tsx"]
+};
